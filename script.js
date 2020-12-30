@@ -89,7 +89,7 @@ function mouse_collision(node, mouse_x, mouse_y, offset) {
 
 function load_credits() {
   c.font = "40px Arial";
-  c.fillText("Ring Leader Election Simulation", cvs.width / 5, window.innerHeight / 3);
+  c.fillText("Bully Leader Election Simulation", cvs.width / 5, window.innerHeight / 3);
 
   c.font = "30px Arial";
   c.fillText("Created by Alexander Richard", (cvs.width / 5) + 70, (window.innerHeight / 3) + 40);
@@ -431,12 +431,6 @@ function create_animation(k) {
 
   c.fillStyle = CRASHED;
   c.fillRect(legend_offset_x - 50, legend_offset_y + 80, 40, -20);
-
-  // draw the connections
-  c.strokeStyle = 'rgba(0, 0, 0, 1)';
-  c.beginPath();
-  c.arc(ring_x, ring_y, ring_rad, 0, 2 * Math.PI);
-  c.stroke();
 
   // draw the nodes
   for (var e = 0; e < node_array.length; e++) {
