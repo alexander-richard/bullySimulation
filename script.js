@@ -135,6 +135,7 @@ const CRASHED = 'grey';
 
 const MSG_ELECTION = 0;
 const MSG_LEADER = 1;
+const MSG_BULLY = 2;
 
 const node_array = [];
 
@@ -351,6 +352,7 @@ class Node {
     c.fillStyle = 'white';
     c.fillText(this.id, this.x - (c.measureText(this.id).width / 2), this.y+(font_size/3));
 
+    /* //TODO: remove these comments
     // add the messages
     font_size = 150 / node_array.length;
     c.font = toString(font_size) + "px Arial";
@@ -382,7 +384,7 @@ class Node {
         c.stroke();
         c.fillText('L: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
       }
-    }
+    } */
   }
 }
 
