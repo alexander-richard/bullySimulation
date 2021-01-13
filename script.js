@@ -171,28 +171,7 @@ function check_repeat_ids (input) {
 }
 
 function parse_input() {
-  var unparsed_structure = document.getElementById("structInput").value;
-  var parsed_structure = unparsed_structure.split(", ");
-
-  if (parsed_structure.length < 3) {
-    alert("Error - Please Enter at Least Three Processes");
-    return;
-  }
-
-  if (parsed_structure.length > 9) {
-    alert("Error - Please Enter at Most Eight Processes");
-    return;
-  }
-
-  if (check_negatives(parsed_structure)) {
-    alert("Error - Please Enter Non-Negative Process ID's");
-    return;
-  }
-
-  if (check_repeat_ids(parsed_structure)) {
-    alert("Error - Please Enter Different ID Numbers");
-    return;
-  }
+  let no_of_nodes = document.getElementById("structInput").value;
 
   // check the speed setting
   if (document.getElementById("fast").checked) {
@@ -213,7 +192,7 @@ function parse_input() {
   document.getElementById("start_button").disabled = true;
   
   start_flag = true;
-  init_simulation(parsed_structure);
+  init_simulation(no_of_nodes);
 }
 
 /*
@@ -296,8 +275,6 @@ function send_message (type, payload, start_node, end_node) {
     end_node.message_queue.push(mssg);
 
 }
-
-// TODO: add send message for single node to node transmission
 
 class Node {
     constructor(id, index) {
@@ -447,15 +424,14 @@ class Node {
     }
   }
 
-function init_simulation(ring_structure) {
-    var len = ring_structure.length;
-    for (let i = 0; i < len; i++) {
-        node_array.push(new Node(parseInt(ring_structure[i]), i));
+function init_simulation(no_of_nodes) {
+    for (let i = 0; i < no_of_nodes; i++) {
+        node_array.push(new Node(i + 1, i));
     }
 
     // sort the nodes into higher or lower categories
-    for (let i = 0; i < len; i++) {
-        for (let j = 0; j < len; j++) {
+    for (let i = 0; i < no_of_nodes; i++) {
+        for (let j = 0; j < no_of_nodes; j++) {
             if (j == i) {
                 continue;
             } else if (node_array[j].id < node_array[i].id) {
