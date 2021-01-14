@@ -245,12 +245,14 @@ class Message {
 function send_message_to_higher (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.higher_ids.length; i++) {
+        mssg = new Message(type, payload, start_node, start_node.higher_ids[i]);
+        if (start_node.higher_ids[i].color == CRASHED && type == MSG_LEADER) {
+            continue;
+        }
+        mssg.draw();
         if (start_node.higher_ids[i].color == CRASHED) {
             continue;
         }
-
-        mssg = new Message(type, payload, start_node, start_node.higher_ids[i]);
-        mssg.draw();
         start_node.higher_ids[i].message_queue.push(mssg);
     }
 }
@@ -258,12 +260,14 @@ function send_message_to_higher (type, payload, start_node) {
 function send_message_to_lower (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.lower_ids.length; i++) {
+        mssg = new Message(type, payload, start_node, start_node.lower_ids[i]);
+        if (start_node.lower_ids[i].color == CRASHED && type == MSG_LEADER) {
+            continue;
+        }
+        mssg.draw();
         if (start_node.lower_ids[i].color == CRASHED) {
             continue;
         }
-
-        mssg = new Message(type, payload, start_node, start_node.lower_ids[i]);
-        mssg.draw();
         start_node.lower_ids[i].message_queue.push(mssg);
     }
 }
