@@ -219,7 +219,7 @@ class Message {
     } else if (this.type == 1) {
       label = "Leader";
     } else { // type == 2
-      label = "Bully";
+      label = "OK";
     }
 
     // draw the message lines
@@ -241,6 +241,7 @@ class Message {
 }
 
 // enqeue with push and dequeue with shift (TODO: delete this comment)
+//TODO: change so mssgs are created/drawn to crashed nodes but not pushed to their queue
 function send_message_to_higher (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.higher_ids.length; i++) {
@@ -253,7 +254,7 @@ function send_message_to_higher (type, payload, start_node) {
         start_node.higher_ids[i].message_queue.push(mssg);
     }
 }
-
+//TODO: change so mssgs are created/drawn to crashed nodes but not pushed to their queue
 function send_message_to_lower (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.lower_ids.length; i++) {
@@ -335,8 +336,13 @@ class Node {
 
       if (this.leader_timer == TIMEOUT_LEADER) {
         this.color = BECOME_LEADER;
+        this.leader_timer = 0;
+        this.counting_to_leader = false;
+
         send_message_to_higher(MSG_LEADER, this.id, node_array[this.index]);
         send_message_to_lower(MSG_LEADER, this.id, node_array[this.index]);
+        
+        return 0;
       }
 
       if (this.counting_to_leader == true) {
