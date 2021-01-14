@@ -222,26 +222,131 @@ class Message {
       label = "OK";
     }
 
+    // change the dimentions of the line to avoid hitting the nodes
+    let new_startX = 0;
+    let new_startY = 0;
+    let new_endX = 0;
+    let new_endY = 0;
+    let radius =  (1 / node_array.length) * 200;
+    let x_adjust_r = false;
+    let x_adjust_l = false;
+    let y_adjust_t = false;
+    let y_adjust_b = false;
+
+
+    // X direction
+    if (this.endX < this.startX) { // end <- start
+        if (this.startX - this.endX < radius) {
+            new_startX = this.startX;
+            new_endX = this.endX;
+            y_adjust_b = true;
+
+        } else {
+            new_startX = this.startX - radius;
+            new_endX = this.endX + radius;
+        }
+        
+    } else if (this.startX < this.endX) { // start -> end
+        if (this.endX - this.startX < radius) {
+            new_startX = this.startX;
+            new_endX = this.endX;
+            y_adjust_t = true;
+
+        } else {
+            new_startX = this.startX + radius;
+            new_endX = this.endX - radius;
+        }
+        
+    } else { // inline
+        new_startX = this.startX;
+        new_endX = this.endX;
+
+        if (this.endY < this.startY) {
+            y_adjust_b = true;
+        } else {
+            y_adjust_t = true;
+        }
+    }
+
+    // Y direction
+    if (this.endY < this.startY) { // start below end
+        if (this.startY - this.endY < radius) {
+            new_startY = this.startY;
+            new_endY = this.endY;
+            x_adjust_r = true;
+
+        } else {
+            new_startY = this.startY - radius;
+            new_endY = this.endY + radius;
+        }
+        
+
+    } else if (this.startY < this.endY) { // start above end
+        if (this.endY - this.startY < radius) {
+            new_startY = this.startY;
+            new_endY = this.endY;
+            x_adjust_l = true;
+
+        } else {
+            new_startY = this.startY + radius;
+            new_endY = this.endY - radius;
+        }
+        
+    } else { // inline
+        new_startY = this.startY;
+        new_endY = this.endY;
+
+        if (this.endX < this.startX) {
+            x_adjust_l = true;
+        } else {
+            x_adjust_r = true;
+        }
+    }
+
+    // adjustments so the lines dont touch the nodes
+    if (x_adjust_r) {
+        new_startX = new_startX + radius / 2;
+        new_endX = new_endX - radius / 2;
+        x_adjust_r = false;
+    }
+    if (x_adjust_l) {
+        new_startX = new_startX - radius / 2;
+        new_endX = new_endX + radius / 2;
+        x_adjust_l = false;
+    }
+
+    if (y_adjust_b) {
+        new_startY = new_startY - radius / 2;
+        new_endY = new_endY + radius / 2;
+        y_adjust_t = false;
+    }
+
+    if (y_adjust_t) {
+        new_startY = new_startY + radius / 2;
+        new_endY = new_endY - radius / 2;
+        y_adjust_b = false;
+    }
+
     // draw the message lines
     c.strokeStyle = "black";
     c.beginPath();
-    c.moveTo(this.startX, this.startY);
-    c.lineTo(this.endX, this.endY);
+    c.moveTo(new_startX, new_startY);
+    c.lineTo(new_endX, new_endY);
     c.stroke();
 
     // draw the label
     c.font = "20px Arial";
-    if (label == "Bully") {
-        c.fillText(label, (this.startX + this.endX - 30) / 2, (this.startY + this.endY - 25) / 2);
+    if (label == "OK") {
+        c.fillText(label, ((new_startX + new_endX) / 2) - 15, ((new_startY + new_endY) / 2) + 30);
 
     } else {
-        c.fillText(label, (this.startX + this.endX + 15) / 2, (this.startY + this.endY + 15) / 2);
+        c.fillText(label, ((new_startX + new_endX) / 2) - 30, ((new_startY + new_endY) / 2) - 15);
     }
+
   }
 }
 
 // enqeue with push and dequeue with shift (TODO: delete this comment)
-//TODO: change so mssgs are created/drawn to crashed nodes but not pushed to their queue
 function send_message_to_higher (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.higher_ids.length; i++) {
@@ -256,7 +361,7 @@ function send_message_to_higher (type, payload, start_node) {
         start_node.higher_ids[i].message_queue.push(mssg);
     }
 }
-//TODO: change so mssgs are created/drawn to crashed nodes but not pushed to their queue
+
 function send_message_to_lower (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.lower_ids.length; i++) {
@@ -405,8 +510,6 @@ class Node {
       c.fillStyle = 'white';
       c.fillText(this.id, this.x - (c.measureText(this.id).width / 2), this.y+(font_size/3));
    
-  
-      //TODO: remove these comments
       // add the messages
       font_size = 150 / node_array.length;
       c.font = toString(font_size) + "px Arial";
