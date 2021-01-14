@@ -236,7 +236,7 @@ class Message {
 
     // X direction
     if (this.endX < this.startX) { // end <- start
-        if (this.startX - this.endX < radius) {
+        if (this.startX - this.endX < radius * 2) {
             new_startX = this.startX;
             new_endX = this.endX;
             y_adjust_b = true;
@@ -247,7 +247,7 @@ class Message {
         }
         
     } else if (this.startX < this.endX) { // start -> end
-        if (this.endX - this.startX < radius) {
+        if (this.endX - this.startX < radius * 2) {
             new_startX = this.startX;
             new_endX = this.endX;
             y_adjust_t = true;
@@ -270,7 +270,7 @@ class Message {
 
     // Y direction
     if (this.endY < this.startY) { // start below end
-        if (this.startY - this.endY < radius) {
+        if (this.startY - this.endY < radius * 2) {
             new_startY = this.startY;
             new_endY = this.endY;
             x_adjust_r = true;
@@ -282,7 +282,7 @@ class Message {
         
 
     } else if (this.startY < this.endY) { // start above end
-        if (this.endY - this.startY < radius) {
+        if (this.endY - this.startY < radius * 2) {
             new_startY = this.startY;
             new_endY = this.endY;
             x_adjust_l = true;
@@ -334,14 +334,49 @@ class Message {
     c.lineTo(new_endX, new_endY);
     c.stroke();
 
+    // determine how much to rotate the context before drawing the label
+    let dx = new_startX - new_endX;
+    let dy = new_startY - new_endY;
+    let angle = Math.atan2(dy, dx);
+
+    if (new_startX < new_endX && new_startY > new_endY || new_startX < new_endX && new_startY < new_endY) {
+        dx = new_endX - new_startX;
+        dy = new_endY - new_startY;
+        angle = Math.atan2(dy, dx);
+        console.log("Switch!");
+    }
+
+    // rotate the context
+    c.save();    
+
     // draw the label
-    c.font = "20px Arial";
+    let font_size = 150 / node_array.length;
+    c.font = font_size + "px Arial";
     if (label == "OK") {
-        c.fillText(label, ((new_startX + new_endX) / 2) - 15, ((new_startY + new_endY) / 2) + 30);
+        dx = new_endX - new_startX;
+        dy = new_endY - new_startY;
+        angle = Math.atan2(dy, dx);
+
+        if (new_startX > new_endX && new_startY > new_endY || new_startX > new_endX && new_startY < new_endY) {
+            dx = new_startX - new_endX;
+            dy = new_startY - new_endY;
+            angle = Math.atan2(dy, dx);
+            console.log("Switch!");
+        }
+
+        c.translate(((new_startX + new_endX) / 2), ((new_startY + new_endY) / 2));
+        c.rotate(angle);
+        c.fillText(label, -15, -10);
 
     } else {
-        c.fillText(label, ((new_startX + new_endX) / 2) - 30, ((new_startY + new_endY) / 2) - 15);
+        
+        c.translate(((new_startX + new_endX) / 2), ((new_startY + new_endY) / 2));
+        c.rotate(angle);
+        c.fillText(label, -40, -10);
     }
+
+    //restore the context
+    c.restore();
 
   }
 }
@@ -445,6 +480,7 @@ class Node {
 
       if (this.leader_timer == TIMEOUT_LEADER) {
         this.color = BECOME_LEADER;
+        this.leader = this.id;
         this.leader_timer = 0;
         this.counting_to_leader = false;
 
@@ -495,21 +531,44 @@ class Node {
 
       return 0;
     }
+
+    draw_node_identifier = () => {
+      c.strokeStyle = 'black';
+      c.fillStyle = 'black';
+      c.beginPath();
+      let node_rad = (1 / node_array.length) * 200
+      if (node_rad >= 40) {
+        node_rad = 40;
+      }
+      c.arc(this.x, this.y, node_rad + 5, 0, 2 * Math.PI);
+      c.stroke();
+      
+    }
   
     draw = () => {
       c.strokeStyle = 'black';
       c.fillStyle = this.color;
       c.beginPath();
-      c.arc(this.x, this.y, (1 / node_array.length) * 200, 0, 2 * Math.PI);
+      let node_rad = (1 / node_array.length) * 200
+      if (node_rad >= 40) {
+        node_rad = 40;
+      }
+      c.arc(this.x, this.y, node_rad, 0, 2 * Math.PI);
       c.fill(); // stroke() for lines
   
       // add the labels
       let font_size = 150 / node_array.length;
+      if (font_size > 40) {
+        font_size = 40;
+      }
       c.font = font_size + "px Arial";
       c.strokeStyle = 'white';
       c.fillStyle = 'white';
       c.fillText(this.id, this.x - (c.measureText(this.id).width / 2), this.y+(font_size/3));
+      c.strokeStyle = 'black';
+      c.fillStyle = 'black';
    
+      // ********** QUEUE DEBUGGING SECTION (uncomment to debug) ************
       // add the messages
       font_size = 150 / node_array.length;
       c.font = toString(font_size) + "px Arial";
@@ -524,6 +583,7 @@ class Node {
   
       c.strokeStyle = 'black';
       c.fillStyle = 'black';
+      /*
       c.beginPath();
       if (this.message_queue.length == 0) {
         c.rect(this.x + msg_offset, this.y + 2, 80, 0 - font_size);
@@ -532,16 +592,31 @@ class Node {
   
       
       if (this.message_queue.length != 0) {
-        if (this.message_queue[0].type == 0) {
+        if (this.message_queue[0].type == MSG_ELECTION) {
           c.rect(this.x + msg_offset, this.y + 3, c.measureText("E: " + this.payload).width / 2, 0 - font_size);
           c.stroke();
           c.fillText('E: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
-        } else {
+        } else if (this.message_queue[0].type == MSG_LEADER) {
           c.rect(this.x + msg_offset, this.y + 3, c.measureText("L: " + this.payload).width / 2, 0 - (font_size));
           c.stroke();
           c.fillText('L: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
+        } else { // Bully
+          c.rect(this.x + msg_offset, this.y + 3, c.measureText("L: " + this.payload).width / 2, 0 - (font_size));
+          c.stroke();
+          c.fillText('B: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
         }
+      } */
+      // ********** END OF QUEUE DEBUGGING SECTION ************
+
+      c.font = "15px Arial";
+      if (this.leader == -1) {
+        c.fillText("Leader: None", this.x + msg_offset - 10, this.y + 15);
+      } else {
+        c.fillText("Leader: " + this.leader, this.x + msg_offset - 10, this.y + 15);
       }
+
+      c.fillText("Leader Timer: " + this.leader_timer, this.x + msg_offset - 10, this.y);      
+      
     }
   }
 
@@ -571,24 +646,23 @@ function init_simulation(no_of_nodes) {
 function create_animation(k) {
     let font_size = 150 / node_array.length;
     c.font = toString(font_size) + "px Arial";
-    //c.fillText("Iteration: " + k, 20, 30); // uncomment to debug
 
     // draw the legend
     let legend_offset_x = cvs.width - 250;
     let legend_offset_y = 30;
     c.font = "23px Arial";
-    c.fillText("Elected Leader", legend_offset_x, legend_offset_y + 20);
-    c.fillText("Requesting an Election", legend_offset_x, legend_offset_y + 50);
-    c.fillText("Crashed", legend_offset_x, legend_offset_y + 80);
+    c.fillText("Elected Leader", legend_offset_x, legend_offset_y + 10);
+    c.fillText("Requesting an Election", legend_offset_x, legend_offset_y + 40);
+    c.fillText("Crashed", legend_offset_x, legend_offset_y + 70);
 
     c.fillStyle = BECOME_LEADER;
-    c.fillRect(legend_offset_x - 50, legend_offset_y + 20, 40, -20);
+    c.fillRect(legend_offset_x - 50, legend_offset_y + 10, 40, -20);
 
     c.fillStyle = CALL_ELECTION;
-    c.fillRect(legend_offset_x - 50, legend_offset_y + 50, 40, -20);
+    c.fillRect(legend_offset_x - 50, legend_offset_y + 40, 40, -20);
 
     c.fillStyle = CRASHED;
-    c.fillRect(legend_offset_x - 50, legend_offset_y + 80, 40, -20);
+    c.fillRect(legend_offset_x - 50, legend_offset_y + 70, 40, -20);
 
     // draw the nodes
     for (var e = 0; e < node_array.length; e++) {
@@ -609,6 +683,7 @@ async function start_simulation() {
   
       // run through all processes
       for (let i = 0; i < node_array.length; i++) {
+        node_array[i].draw_node_identifier();
         skip = node_array[i].run();
   
         if (simulation_speed != -1 && skip == 0) {
