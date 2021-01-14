@@ -128,6 +128,8 @@ const MSG_BULLY = 2;
 
 const node_array = [];
 
+const TIMEOUT_LEADER = 10;
+
 var start_flag = false;
 var pause_flag = false;
 
@@ -288,6 +290,7 @@ class Node {
       this.leader = -1;
       this.message_queue = [];
       this.leader_timer = 0;
+      this.sent_election = false;
   
       this.lower_ids = [];
       this.higher_ids = [];
@@ -330,7 +333,7 @@ class Node {
   
     run = () => {
 
-      if (this.leader_timer == 5) {
+      if (this.leader_timer == TIMEOUT_LEADER) {
         this.color = BECOME_LEADER;
         send_message_to_higher(MSG_LEADER, this.id, node_array[this.index]);
         send_message_to_lower(MSG_LEADER, this.id, node_array[this.index]);
@@ -361,15 +364,20 @@ class Node {
             }
 
             this.counting_to_leader = true;
-            send_message_to_higher(MSG_ELECTION, this.id, node_array[this.index]);
+            if (!this.sent_election) {
+                send_message_to_higher(MSG_ELECTION, this.id, node_array[this.index]);
+                this.sent_election = true;
+            }
 
         } else if (msg.type == MSG_LEADER) {
             this.leader = msg.payload;
             this.color = RUNNING_PROCESS;
-        } else {
+        } else { // MSG_BULLY
             this.counting_to_leader = false;
+            this.sent_election = false;
         }
       }
+
       return 0;
     }
   
