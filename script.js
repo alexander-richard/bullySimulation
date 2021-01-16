@@ -341,7 +341,7 @@ class Message {
     let run = new_endX - new_startX;
 
     // calculate the angle between the axis and the line
-    let alpha = Math.asin(rise/run);
+    let alpha = Math.atan(rise/run);  
     let delta = (Math.PI / 2) - alpha;
 
     // calculate the angle between the axis and the arrow end point
@@ -354,7 +354,7 @@ class Message {
     let y_offset_b = arrow_len * Math.cos(delta);
     let x_offset_b = arrow_len * Math.sin(delta);
 
-    if (new_startX < new_endX) {
+    if (new_startX <= new_endX) {
       c.beginPath();
       c.moveTo(new_endX, new_endY);
       c.lineTo(new_endX - x_offset_t, new_endY - y_offset_t);
