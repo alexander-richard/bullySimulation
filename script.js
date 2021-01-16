@@ -436,6 +436,11 @@ class Node {
       this.message_queue = [];
       this.leader_timer = 0;
       this.sent_election = false;
+
+      // timer and flag to ping the leader
+      this.check_leader_timer = 0;
+      this.leader_reply_timer = 0;
+      this.sent_leader_check = false;
   
       this.lower_ids = [];
       this.higher_ids = [];
@@ -477,12 +482,38 @@ class Node {
     }
   
     run = () => {
+      if (this.color == CRASHED) {
+        console.log(this.id);
+        return 0;
+      }
+
+      // move this under leader reply timer if it causes timing bugs
+      if (this.leader_reply_timer == 5 && this.leader != this.id) {
+        this.initiate_election();
+      }
+
+      if (this.sent_leader_check && this.leader != this.id) {
+        this.leader_reply_timer++;
+      }
+
+      // move this under leader check timer if it causes timing bugs
+      if (this.check_leader_timer == 15 && this.leader != this.id) {
+        send_message(MSG_ELECTION, this.id, node_array[this.index], node_array[this.leader - 1]);
+        this.sent_leader_check = true;
+      }
+
+      if (this.leader != -1 && this.leader != this.id) {
+          this.check_leader_timer++;
+      }
 
       if (this.leader_timer == TIMEOUT_LEADER) {
         this.color = BECOME_LEADER;
         this.leader = this.id;
         this.leader_timer = 0;
         this.counting_to_leader = false;
+        this.check_leader_timer = 0;
+        this.leader_reply_timer = 0;
+        this.sent_leader_check = false;
 
         send_message_to_higher(MSG_LEADER, this.id, node_array[this.index]);
         send_message_to_lower(MSG_LEADER, this.id, node_array[this.index]);
@@ -514,18 +545,32 @@ class Node {
                 send_message(MSG_BULLY, this.id, node_array[this.index], msg.start_node);
             }
 
-            this.counting_to_leader = true;
+            if (this.leader != this.id) {
+                this.counting_to_leader = true;
+            }
+
             if (!this.sent_election) {
                 send_message_to_higher(MSG_ELECTION, this.id, node_array[this.index]);
                 this.sent_election = true;
+                this.color = CALL_ELECTION;
             }
 
         } else if (msg.type == MSG_LEADER) {
             this.leader = msg.payload;
             this.color = RUNNING_PROCESS;
+            this.check_leader_timer = 0;
+            this.leader_reply_timer = 0;
+            this.sent_leader_check = false;
         } else { // MSG_BULLY
             this.counting_to_leader = false;
             this.sent_election = false;
+            this.color = RUNNING_PROCESS;
+            if (msg.start_node.id == this.leader) {
+                this.check_leader_timer = 0;
+                this.leader_reply_timer = 0;
+                this.sent_leader_check = false;
+
+            }
         }
       }
 
@@ -616,7 +661,8 @@ class Node {
       }
 
       c.fillText("Leader Timer: " + this.leader_timer, this.x + msg_offset - 10, this.y);      
-      
+      c.fillText("Check Leader: " + this.check_leader_timer, this.x + msg_offset - 10, this.y + 30);  
+      c.fillText("Leader Timeout: " + this.leader_reply_timer, this.x + msg_offset - 10, this.y + 45);  
     }
   }
 
@@ -688,7 +734,7 @@ async function start_simulation() {
   
         if (simulation_speed != -1 && skip == 0) {
           await sleep(simulation_speed);
-        } else {
+        } else if (pause_flag){
           while (pause_flag && skip == 0) {
             await sleep(5);
           }
