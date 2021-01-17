@@ -128,7 +128,7 @@ const MSG_BULLY = 2;
 
 const node_array = [];
 
-const TIMEOUT_LEADER = 10;
+var TIMEOUT_LEADER = 10;
 
 var start_flag = false;
 var pause_flag = false;
@@ -727,7 +727,7 @@ function init_simulation(no_of_nodes) {
     }
 
     arrange_nodes(ring_x, ring_y, ring_rad);
-
+    TIMEOUT_LEADER = node_array.length;
     start_simulation();
 }
 
