@@ -527,22 +527,15 @@ class Node {
   
     run = () => {
       if (this.color == CRASHED) {
-        this.leader
+        this.leader = -1;
         return 0;
       }
-
-      // move this under leader reply timer if it causes timing bugs
-     /* if (this.leader_reply_timer == 5 && this.leader != this.id) {
-        this.initiate_election();
-      }*/
 
       if (this.sent_leader_check && this.leader != this.id) {
         this.leader_reply_timer++;
       }
 
-      // move this under leader check timer if it causes timing bugs
       if (this.check_leader_timer == 15 && this.leader != this.id) {
-        //send_message(MSG_ELECTION, this.id, node_array[this.index], node_array[this.leader - 1]);
         this.sent_leader_check = true;
       }
 
