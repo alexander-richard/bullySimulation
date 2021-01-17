@@ -393,6 +393,9 @@ class Message {
 
     // draw the label
     let font_size = 150 / node_array.length;
+    if (font_size > 30) {
+      font_size = 30;
+    }
     c.font = font_size + "px Arial";
     if (label == "OK") {
         dx = new_endX - new_startX;
@@ -708,8 +711,7 @@ class Node {
       }
 
       c.fillText("Leader Timer: " + this.leader_timer, this.x + msg_offset - 10, this.y);      
-      c.fillText("Check Leader: " + this.check_leader_timer, this.x + msg_offset - 10, this.y + 30);  
-      c.fillText("Leader Timeout: " + this.leader_reply_timer, this.x + msg_offset - 10, this.y + 45);  
+      
     }
   }
 
