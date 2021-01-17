@@ -524,13 +524,14 @@ class Node {
   
     run = () => {
       if (this.color == CRASHED) {
+        this.leader
         return 0;
       }
 
       // move this under leader reply timer if it causes timing bugs
-      if (this.leader_reply_timer == 5 && this.leader != this.id) {
+     /* if (this.leader_reply_timer == 5 && this.leader != this.id) {
         this.initiate_election();
-      }
+      }*/
 
       if (this.sent_leader_check && this.leader != this.id) {
         this.leader_reply_timer++;
@@ -538,7 +539,7 @@ class Node {
 
       // move this under leader check timer if it causes timing bugs
       if (this.check_leader_timer == 15 && this.leader != this.id) {
-        send_message(MSG_ELECTION, this.id, node_array[this.index], node_array[this.leader - 1]);
+        //send_message(MSG_ELECTION, this.id, node_array[this.index], node_array[this.leader - 1]);
         this.sent_leader_check = true;
       }
 
@@ -589,14 +590,15 @@ class Node {
                 send_message(MSG_BULLY, this.id, node_array[this.index], msg.start_node);
             }
 
-            if (this.leader != this.id) {
-                this.counting_to_leader = true;
-            }
+            this.counting_to_leader = true;
 
             if (!this.sent_election) {
                 send_message_to_higher(MSG_ELECTION, this.id, node_array[this.index]);
                 this.sent_election = true;
-                this.color = CALL_ELECTION;
+                if (this.leader != this.id) {
+                  this.color = CALL_ELECTION;
+                }
+                
             }
 
         } else if (msg.type == MSG_LEADER) {
