@@ -425,7 +425,9 @@ class Message {
   }
 }
 
-// enqeue with push and dequeue with shift (TODO: delete this comment)
+/*
+ * Sends a message to all nodes with higher ids than itself. The start_node is the sending node.
+ */
 function send_message_to_higher (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.higher_ids.length; i++) {
@@ -441,6 +443,9 @@ function send_message_to_higher (type, payload, start_node) {
     }
 }
 
+/*
+ * Sends a message to all nodes with lower ids than itself. The start_node is the sending node.
+ */
 function send_message_to_lower (type, payload, start_node) {
     let mssg = null;
     for (let i = 0; i < start_node.lower_ids.length; i++) {
@@ -456,6 +461,10 @@ function send_message_to_lower (type, payload, start_node) {
     }
 }
 
+/*
+ * Sends a message between two nodes. The type is either election, bully, or leader
+ * the start node is the sending node and the end_node is the receiving node
+ */
 function send_message (type, payload, start_node, end_node) {
     if (end_node.color == CRASHED) {
         return;
@@ -500,31 +509,7 @@ class Node {
       this.election = true;
       this.draw();
     }
-  
-    determine_msg_priority = () => {
-      if (this.message_queue.length <= 1) {
-        return;
-      }
-  
-      let highest_pri = new Message(MSG_ELECTION, -1);
-  
-      for (let i=0; i < this.message_queue.length; i++) {
-        if (this.message_queue[i].type == MSG_LEADER) {
-          if (highest_pri.type == MSG_ELECTION) {
-            highest_pri = this.message_queue[i];
-          } else if (this.message_queue[i].payload >= highest_pri.payload) {
-            highest_pri = this.message_queue[i];
-          }
-        } else {
-          if (highest_pri.type == MSG_ELECTION && highest_pri.payload <= this.message_queue[i].payload) {
-            highest_pri = this.message_queue[i];
-          }
-        }
-      }
-  
-      this.message_queue = [highest_pri];
-    }
-  
+    
     run = () => {
       if (this.color == CRASHED) {
         this.leader = -1;
@@ -619,6 +604,9 @@ class Node {
       return 0;
     }
 
+    /*
+     * Draws the circle around the current process.
+     */
     draw_node_identifier = () => {
       c.strokeStyle = 'black';
       c.fillStyle = 'black';
@@ -670,31 +658,6 @@ class Node {
   
       c.strokeStyle = 'black';
       c.fillStyle = 'black';
-      /*
-      c.beginPath();
-      if (this.message_queue.length == 0) {
-        c.rect(this.x + msg_offset, this.y + 2, 80, 0 - font_size);
-        c.stroke();
-      }
-  
-      
-      if (this.message_queue.length != 0) {
-        if (this.message_queue[0].type == MSG_ELECTION) {
-          c.rect(this.x + msg_offset, this.y + 3, c.measureText("E: " + this.payload).width / 2, 0 - font_size);
-          c.stroke();
-          c.fillText('E: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
-        } else if (this.message_queue[0].type == MSG_LEADER) {
-          c.rect(this.x + msg_offset, this.y + 3, c.measureText("L: " + this.payload).width / 2, 0 - (font_size));
-          c.stroke();
-          c.fillText('L: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
-        } else { // Bully
-          c.rect(this.x + msg_offset, this.y + 3, c.measureText("L: " + this.payload).width / 2, 0 - (font_size));
-          c.stroke();
-          c.fillText('B: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
-        }
-      } 
-      */
-      // ********** END OF QUEUE DEBUGGING SECTION ************
 
       c.font = "15px Arial";
       if (this.leader == -1) {
@@ -758,6 +721,9 @@ function create_animation(k) {
     }
 }
 
+/*
+ * Main Loop which runs and draws each process.
+ */
 async function start_simulation() {
     c.clearRect(0, 0, cvs.width, cvs.height);
     create_animation(0);
@@ -790,6 +756,9 @@ async function start_simulation() {
     }
   }
   
+  /*
+  * arranges the nodes in a circle. defines the X and Y values for each process.
+  */
   function arrange_nodes(x, y, r) {
     for (let i = 0; i < node_array.length; i++) {
       node_array[i].x = (x + r * Math.cos((2 * Math.PI) * i/node_array.length))
