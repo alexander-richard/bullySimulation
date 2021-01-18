@@ -108,7 +108,6 @@ function toggle_crashed_node(node) {
 
   } else {
     node.color = CRASHED;
-    node.leader = -1;
     node.draw();
   }
 }
@@ -128,7 +127,7 @@ const MSG_BULLY = 2;
 
 const node_array = [];
 
-const TIMEOUT_LEADER = 10;
+var TIMEOUT_LEADER = 10;
 
 var start_flag = false;
 var pause_flag = false;
@@ -150,26 +149,6 @@ function set_timing_interval(interval) {
 
 function step() {
   pause_flag = false;
-}
-
-function check_negatives (input) {
-  for (let i = 0; i < input.length; i++) {
-    if (input[i] < 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function check_repeat_ids (input) {
-  let seen = [];
-  for (let i = 0; i < input.length; i++) {
-    if (seen.includes(input[i])) {
-      return true;
-    }
-    seen.push(input[i]);
-  }
-  return false;
 }
 
 function parse_input() {
@@ -334,6 +313,49 @@ class Message {
     c.lineTo(new_endX, new_endY);
     c.stroke();
 
+    // draw the arrows
+    let arrow_len = 20;
+    let arrow_angle = 60 * (Math.PI / 180);
+    let rise = new_startY - new_endY;
+    let run = new_endX - new_startX;
+
+    // calculate the angle between the axis and the line
+    let alpha = Math.atan(rise/run);  
+    let delta = (Math.PI / 2) - alpha;
+
+    // calculate the angle between the axis and the arrow end point
+    let beta = (arrow_angle / 2) - alpha;
+    delta = delta - (arrow_angle / 2);
+
+    // determine the x and y offset for the arrow lines
+    let y_offset_t = arrow_len * Math.sin(beta);
+    let x_offset_t = arrow_len * Math.cos(beta);
+    let y_offset_b = arrow_len * Math.cos(delta);
+    let x_offset_b = arrow_len * Math.sin(delta);
+
+    if (new_startX <= new_endX) {
+      c.beginPath();
+      c.moveTo(new_endX, new_endY);
+      c.lineTo(new_endX - x_offset_t, new_endY - y_offset_t);
+      c.stroke();
+
+      c.beginPath();
+      c.moveTo(new_endX, new_endY);
+      c.lineTo(new_endX - x_offset_b, new_endY + y_offset_b);
+      c.stroke();
+    } else if (new_endX < new_startX) {
+      c.beginPath();
+      c.moveTo(new_endX, new_endY);
+      c.lineTo(new_endX + x_offset_t, new_endY + y_offset_t);
+      c.stroke();
+
+      c.beginPath();
+      c.moveTo(new_endX, new_endY);
+      c.lineTo(new_endX + x_offset_b, new_endY - y_offset_b);
+      c.stroke();
+  }
+    
+
     // determine how much to rotate the context before drawing the label
     let dx = new_startX - new_endX;
     let dy = new_startY - new_endY;
@@ -343,7 +365,6 @@ class Message {
         dx = new_endX - new_startX;
         dy = new_endY - new_startY;
         angle = Math.atan2(dy, dx);
-        console.log("Switch!");
     }
 
     // rotate the context
@@ -351,6 +372,9 @@ class Message {
 
     // draw the label
     let font_size = 150 / node_array.length;
+    if (font_size > 30) {
+      font_size = 30;
+    }
     c.font = font_size + "px Arial";
     if (label == "OK") {
         dx = new_endX - new_startX;
@@ -361,7 +385,6 @@ class Message {
             dx = new_startX - new_endX;
             dy = new_startY - new_endY;
             angle = Math.atan2(dy, dx);
-            console.log("Switch!");
         }
 
         c.translate(((new_startX + new_endX) / 2), ((new_startY + new_endY) / 2));
@@ -436,6 +459,11 @@ class Node {
       this.message_queue = [];
       this.leader_timer = 0;
       this.sent_election = false;
+
+      // timer and flag to ping the leader
+      this.check_leader_timer = 0;
+      this.leader_reply_timer = 0;
+      this.sent_leader_check = false;
   
       this.lower_ids = [];
       this.higher_ids = [];
@@ -452,37 +480,32 @@ class Node {
       this.draw();
     }
   
-    determine_msg_priority = () => {
-      if (this.message_queue.length <= 1) {
-        return;
-      }
-  
-      let highest_pri = new Message(MSG_ELECTION, -1);
-  
-      for (let i=0; i < this.message_queue.length; i++) {
-        if (this.message_queue[i].type == MSG_LEADER) {
-          if (highest_pri.type == MSG_ELECTION) {
-            highest_pri = this.message_queue[i];
-          } else if (this.message_queue[i].payload >= highest_pri.payload) {
-            highest_pri = this.message_queue[i];
-          }
-        } else {
-          if (highest_pri.type == MSG_ELECTION && highest_pri.payload <= this.message_queue[i].payload) {
-            highest_pri = this.message_queue[i];
-          }
-        }
-      }
-  
-      this.message_queue = [highest_pri];
-    }
-  
     run = () => {
+      if (this.color == CRASHED) {
+        this.leader = -1;
+        return 0;
+      }
+
+      if (this.sent_leader_check && this.leader != this.id) {
+        this.leader_reply_timer++;
+      }
+
+      if (this.check_leader_timer == 15 && this.leader != this.id) {
+        this.sent_leader_check = true;
+      }
+
+      if (this.leader != -1 && this.leader != this.id) {
+          this.check_leader_timer++;
+      }
 
       if (this.leader_timer == TIMEOUT_LEADER) {
         this.color = BECOME_LEADER;
         this.leader = this.id;
         this.leader_timer = 0;
         this.counting_to_leader = false;
+        this.check_leader_timer = 0;
+        this.leader_reply_timer = 0;
+        this.sent_leader_check = false;
 
         send_message_to_higher(MSG_LEADER, this.id, node_array[this.index]);
         send_message_to_lower(MSG_LEADER, this.id, node_array[this.index]);
@@ -502,8 +525,12 @@ class Node {
         send_message_to_higher(MSG_ELECTION, this.id, node_array[this.index]);
         
       } else if (this.message_queue.length == 0) {
-        return 1;
-      }
+        if ( this.sent_leader_check) {
+          return 0;
+        } else {
+          return 0;
+        }
+      } 
       
   
       if (this.message_queue.length != 0) {
@@ -515,17 +542,32 @@ class Node {
             }
 
             this.counting_to_leader = true;
+
             if (!this.sent_election) {
                 send_message_to_higher(MSG_ELECTION, this.id, node_array[this.index]);
                 this.sent_election = true;
+                if (this.leader != this.id) {
+                  this.color = CALL_ELECTION;
+                }
+                
             }
 
         } else if (msg.type == MSG_LEADER) {
             this.leader = msg.payload;
             this.color = RUNNING_PROCESS;
+            this.check_leader_timer = 0;
+            this.leader_reply_timer = 0;
+            this.sent_leader_check = false;
         } else { // MSG_BULLY
             this.counting_to_leader = false;
             this.sent_election = false;
+            this.color = RUNNING_PROCESS;
+            if (msg.start_node.id == this.leader) {
+                this.check_leader_timer = 0;
+                this.leader_reply_timer = 0;
+                this.sent_leader_check = false;
+
+            }
         }
       }
 
@@ -568,7 +610,6 @@ class Node {
       c.strokeStyle = 'black';
       c.fillStyle = 'black';
    
-      // ********** QUEUE DEBUGGING SECTION (uncomment to debug) ************
       // add the messages
       font_size = 150 / node_array.length;
       c.font = toString(font_size) + "px Arial";
@@ -583,30 +624,6 @@ class Node {
   
       c.strokeStyle = 'black';
       c.fillStyle = 'black';
-      /*
-      c.beginPath();
-      if (this.message_queue.length == 0) {
-        c.rect(this.x + msg_offset, this.y + 2, 80, 0 - font_size);
-        c.stroke();
-      }
-  
-      
-      if (this.message_queue.length != 0) {
-        if (this.message_queue[0].type == MSG_ELECTION) {
-          c.rect(this.x + msg_offset, this.y + 3, c.measureText("E: " + this.payload).width / 2, 0 - font_size);
-          c.stroke();
-          c.fillText('E: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
-        } else if (this.message_queue[0].type == MSG_LEADER) {
-          c.rect(this.x + msg_offset, this.y + 3, c.measureText("L: " + this.payload).width / 2, 0 - (font_size));
-          c.stroke();
-          c.fillText('L: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
-        } else { // Bully
-          c.rect(this.x + msg_offset, this.y + 3, c.measureText("L: " + this.payload).width / 2, 0 - (font_size));
-          c.stroke();
-          c.fillText('B: ' + this.message_queue[0].payload, this.x + msg_offset, this.y);
-        }
-      } */
-      // ********** END OF QUEUE DEBUGGING SECTION ************
 
       c.font = "15px Arial";
       if (this.leader == -1) {
@@ -620,10 +637,6 @@ class Node {
     }
   }
 
-/*
- * initiates the simulation by creating nodes in the node_array and arranging
- * the x and y values in a cirlce. Calls start_simulation().
- */
 function init_simulation(no_of_nodes) {
     for (let i = 0; i < no_of_nodes; i++) {
         node_array.push(new Node(i + 1, i));
@@ -643,7 +656,7 @@ function init_simulation(no_of_nodes) {
     }
 
     arrange_nodes(ring_x, ring_y, ring_rad);
-
+    TIMEOUT_LEADER = node_array.length;
     start_simulation();
 }
 
@@ -674,9 +687,6 @@ function create_animation(k) {
     }
 }
 
-/*
- * Main loop of the simulation, it handles the timing and running of each node.
- */
 async function start_simulation() {
     c.clearRect(0, 0, cvs.width, cvs.height);
     create_animation(0);
@@ -695,7 +705,7 @@ async function start_simulation() {
   
         if (simulation_speed != -1 && skip == 0) {
           await sleep(simulation_speed);
-        } else {
+        } else if (pause_flag){
           while (pause_flag && skip == 0) {
             await sleep(5);
           }
