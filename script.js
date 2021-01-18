@@ -620,6 +620,10 @@ class Node {
     }
   }
 
+/*
+ * initiates the simulation by creating nodes in the node_array and arranging
+ * the x and y values in a cirlce. Calls start_simulation().
+ */
 function init_simulation(no_of_nodes) {
     for (let i = 0; i < no_of_nodes; i++) {
         node_array.push(new Node(i + 1, i));
@@ -670,6 +674,9 @@ function create_animation(k) {
     }
 }
 
+/*
+ * Main loop of the simulation, it handles the timing and running of each node.
+ */
 async function start_simulation() {
     c.clearRect(0, 0, cvs.width, cvs.height);
     create_animation(0);
